@@ -144,8 +144,8 @@
   </dependencies>
   
   <scm>
-    <connection>scm:svn:https://svn.apache.org/repos/asf/sling/trunk/testing/junit/teleporter</connection>
-    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/sling/trunk/testing/junit/teleporter</developerConnection>
-    <url>https://svn.apache.org/viewvc/sling/trunk/testing/junit/teleporter</url>
+    <connection>scm:git:https://gitbox.apache.org/repos/asf/sling-org-apache-sling-junit-teleporter.git</connection>
+    <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/sling-org-apache-sling-junit-teleporter.git</developerConnection>
+    <url>https://gitbox.apache.org/repos/asf?p=sling-org-apache-sling-junit-teleporter.git</url>
   </scm>
 </project>
