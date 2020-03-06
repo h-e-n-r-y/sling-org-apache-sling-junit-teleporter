@@ -55,9 +55,11 @@ import org.slf4j.helpers.NOPLogger;
  */
 public class ClientSideTeleporter extends TeleporterRule {
 
+    public static final int DEFAULT_TEST_READY_TIMEOUT_SECONDS = 20;
     public static final String DEFAULT_TEST_SERVLET_PATH = "system/sling/junit";
     private DependencyAnalyzer dependencyAnalyzer;
-    private int testReadyTimeoutSeconds = 20;
+    private int testReadyTimeoutSeconds = DEFAULT_TEST_READY_TIMEOUT_SECONDS;
+    private int httpTimeoutSeconds = Integer.MIN_VALUE;
     private int webConsoleReadyTimeoutSeconds = 30;
     private int waitForServiceTimout = 10;
     private boolean enableLogging = false;
@@ -141,6 +143,16 @@ public class ClientSideTeleporter extends TeleporterRule {
         webConsoleReadyTimeoutSeconds = tm;
     }
     
+    /** Set HTTP connect and read timeouts, defaults to the "test ready timeout" value */
+    public void setHttpTimeoutSeconds(int tm) {
+        httpTimeoutSeconds = tm;
+    }
+
+    /** Get HTTP connect and read timeouts, defaults to the "test ready timeout" value */
+    public int getHttpTimeoutSeconds() {
+        return httpTimeoutSeconds == Integer.MIN_VALUE ? testReadyTimeoutSeconds : httpTimeoutSeconds;
+    }
+
     /**
      * Define how long to wait to get a service reference.
      * This applies only on the server-side when using the {@link #getService(Class)} or {@link #getService(Class, String)} methods.
@@ -270,6 +282,12 @@ public class ClientSideTeleporter extends TeleporterRule {
         }
     }
 
+    TeleporterHttpClient setupTeleporterHttpClient() {
+        final TeleporterHttpClient result = new TeleporterHttpClient(baseUrl, testServletPath, getHttpTimeoutSeconds());
+        result.setCredentials(serverCredentials);
+        return result;
+    }
+
     @Override
     public Statement apply(final Statement base, final Description description) {
         customize();
@@ -286,8 +304,7 @@ public class ClientSideTeleporter extends TeleporterRule {
             baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
         }
 
-        final TeleporterHttpClient httpClient = new TeleporterHttpClient(baseUrl, testServletPath);
-        httpClient.setCredentials(serverCredentials);
+        final TeleporterHttpClient httpClient = setupTeleporterHttpClient();
         
         // As this is not a ClassRule (which wouldn't map the test results correctly in an IDE)
         // we currently create and install a test bundle for every test method. It might be good

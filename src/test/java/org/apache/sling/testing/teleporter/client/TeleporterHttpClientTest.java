@@ -25,6 +25,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
+import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.Timer;
@@ -154,5 +155,25 @@ public class TeleporterHttpClientTest {
         final String nonExistentHostURL = "http://UnknownHost-" + UUID.randomUUID();
         final TeleporterHttpClient client = new TeleporterHttpClient(nonExistentHostURL, "/");
         client.getHttpGetStatus(nonExistentHostURL);
+    }
+
+    @Test
+    public void testHttpTimeout() throws IOException {
+        final String delayPath = "/delay";
+        final int longDelaySeconds = 2;
+        final int httpTimeoutSeconds = longDelaySeconds / 2;
+
+        http.stubFor(get(urlEqualTo(delayPath))
+            .willReturn(aResponse()
+            .withStatus(200)
+            .withFixedDelay(longDelaySeconds * 1000)));
+
+        final TeleporterHttpClient client = new TeleporterHttpClient(baseUrl, delayPath, httpTimeoutSeconds);
+        try {
+            client.getHttpGetStatus(baseUrl + delayPath);
+            fail("Expected HTTP request to time out");
+        } catch(SocketTimeoutException ste) {
+            // as expected due to timeout
+        }
     }
 }

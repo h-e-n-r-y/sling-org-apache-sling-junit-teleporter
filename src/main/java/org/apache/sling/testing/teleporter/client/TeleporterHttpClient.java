@@ -57,6 +57,7 @@ class TeleporterHttpClient {
     private final String baseUrl;
     private String credentials = null;
     private final String testServletPath;
+    private final int httpTimeoutSeconds;
     
     static final class SimpleHttpResponse {
         private final int status;
@@ -76,7 +77,12 @@ class TeleporterHttpClient {
     }
     
     TeleporterHttpClient(String baseUrl, String testServletPath) {
+        this(baseUrl, testServletPath, ClientSideTeleporter.DEFAULT_TEST_READY_TIMEOUT_SECONDS);
+    }
+
+    TeleporterHttpClient(String baseUrl, String testServletPath, int httpTimeoutSeconds) {
         this.baseUrl = baseUrl;
+        this.httpTimeoutSeconds = httpTimeoutSeconds;
         if(!testServletPath.endsWith("/")) {
             testServletPath += "/";
         }
@@ -85,6 +91,10 @@ class TeleporterHttpClient {
 
     void setCredentials(String cred) {
         credentials = cred;
+    }
+
+    int getHttpTimeoutSeconds() {
+        return httpTimeoutSeconds;
     }
     
     public void setConnectionCredentials(URLConnection c) {
@@ -112,13 +122,20 @@ class TeleporterHttpClient {
         }
         throw new IOException("Did not get status " + expectedStatus + " at " + url + " after " + timeoutMsec + " msec, got " + statusSet);
     }
+
+    HttpURLConnection setHttpTimeouts(HttpURLConnection c) {
+        final int timeoutMsec = httpTimeoutSeconds * 1000;
+        c.setConnectTimeout(timeoutMsec);
+        c.setReadTimeout(timeoutMsec);
+        return c;
+    }
     
     void installBundle(InputStream bundle, String bundleSymbolicName, int webConsoleReadyTimeoutSeconds) throws MalformedURLException, IOException {
         // Equivalent of
         // curl -u admin:admin -F action=install -Fbundlestart=1 -Fbundlefile=@somefile.jar http://localhost:8080/system/console/bundles
         final String url = baseUrl + "/system/console/bundles";
         final String contentType = "application/octet-stream";
-        final HttpURLConnection c = (HttpURLConnection)new URL(url).openConnection();
+        final HttpURLConnection c = setHttpTimeouts((HttpURLConnection)new URL(url).openConnection());
         
         waitForStatus(url, 200, webConsoleReadyTimeoutSeconds * 1000);
         
@@ -197,7 +214,7 @@ class TeleporterHttpClient {
         // equivalent of
         // curl -u admin:admin -F action=uninstall http://localhost:8080/system/console/bundles/$N
         final String url = baseUrl + "/system/console/bundles/" + bundleSymbolicName;
-        final HttpURLConnection c = (HttpURLConnection)new URL(url).openConnection();
+        final HttpURLConnection c = setHttpTimeouts((HttpURLConnection)new URL(url).openConnection());
         
         waitForStatus(url, 200, webConsoleReadyTimeoutSeconds * 1000);
         
@@ -216,7 +233,7 @@ class TeleporterHttpClient {
     }
     
     public SimpleHttpResponse getHttpGetStatus(String url) throws MalformedURLException, IOException {
-        final HttpURLConnection c = (HttpURLConnection)new URL(url).openConnection();
+        final HttpURLConnection c = setHttpTimeouts((HttpURLConnection)new URL(url).openConnection());
         setConnectionCredentials(c);
         c.setUseCaches(false);
         c.setDoOutput(true);
@@ -258,7 +275,7 @@ class TeleporterHttpClient {
             delay.waitNextDelay();
         }
         
-        final HttpURLConnection c = (HttpURLConnection)new URL(testUrl).openConnection();
+        final HttpURLConnection c = setHttpTimeouts((HttpURLConnection)new URL(testUrl).openConnection());
         try {
         	setConnectionCredentials(c);
             c.setRequestMethod("POST");
