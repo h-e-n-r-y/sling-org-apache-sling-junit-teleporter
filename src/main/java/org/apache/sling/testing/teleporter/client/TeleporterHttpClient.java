@@ -47,12 +47,16 @@ import org.apache.commons.io.IOUtils;
 import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
 import org.junit.runners.model.MultipleFailureException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** Barebones HTTP client that supports just what the teleporter needs,
  *  with no dependencies outside of java.* and org.junit. Prevents us 
  *  from imposing a particular HTTP client version. 
  */
 class TeleporterHttpClient {
+    private final Logger log = LoggerFactory.getLogger(getClass());
+
     private final String CHARSET = "UTF-8";
     private final String baseUrl;
     private String credentials = null;
@@ -101,11 +105,13 @@ class TeleporterHttpClient {
         if(credentials != null && !credentials.isEmpty()) {
             final String basicAuth = "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes());
             c.setRequestProperty ("Authorization", basicAuth);
+            log.debug("Credentials set");
         }
     }
 
     /** Wait until specified URL returns specified status */
     public String waitForStatus(String url, int expectedStatus, int timeoutMsec) throws IOException {
+        log.debug("Waiting for status {} at {}, timeout {} msec", expectedStatus, url, timeoutMsec);
         final long end = System.currentTimeMillis() + timeoutMsec;
         final Set<Integer> statusSet = new HashSet<Integer>();
         final ExponentialBackoffDelay d = new ExponentialBackoffDelay(50,  250);
@@ -127,6 +133,7 @@ class TeleporterHttpClient {
         final int timeoutMsec = httpTimeoutSeconds * 1000;
         c.setConnectTimeout(timeoutMsec);
         c.setReadTimeout(timeoutMsec);
+        log.debug("HTTP connect + read timeouts set to {} msec", timeoutMsec);
         return c;
     }
     
@@ -150,12 +157,14 @@ class TeleporterHttpClient {
             if(status != 302) {
                 throw new IOException("Got status code " + status + " for " + url);
             }
+            log.debug("POST request to install bundle {} successful", bundleSymbolicName);
         } finally {
             cleanup(c);
         }
     }
     
     void verifyCorrectBundleState(String bundleSymbolicName, int timeoutInSeconds) throws IOException {
+        log.debug("Verifying bundle {} state, timeout {} seconds", bundleSymbolicName, timeoutInSeconds);
         final String url = baseUrl + "/system/console/bundles/" + bundleSymbolicName + ".json";
         
         final long end = System.currentTimeMillis() + timeoutInSeconds * 1000;
@@ -173,6 +182,7 @@ class TeleporterHttpClient {
                 JsonObject bundleObject = jsonArray.getJsonObject(0);
                 String state = bundleObject.getString("state");
                 if ("Active".equals(state)) {
+                    log.debug("Bundle {} is active", bundleSymbolicName);
                     return;
                 }
                 // otherwise evaluate the import section
@@ -211,6 +221,8 @@ class TeleporterHttpClient {
     }
 
     void uninstallBundle(String bundleSymbolicName, int webConsoleReadyTimeoutSeconds) throws MalformedURLException, IOException {
+        log.debug("Uninstalling bundle {}", bundleSymbolicName);
+
         // equivalent of
         // curl -u admin:admin -F action=uninstall http://localhost:8080/system/console/bundles/$N
         final String url = baseUrl + "/system/console/bundles/" + bundleSymbolicName;
@@ -227,12 +239,14 @@ class TeleporterHttpClient {
             if(status != 200) {
                 throw new IOException("Got status code " + status + " for " + url);
             }
+            log.debug("POST request to uninstall bundle {} successful", bundleSymbolicName);
         } finally {
             cleanup(c);
         }
     }
     
     public SimpleHttpResponse getHttpGetStatus(String url) throws MalformedURLException, IOException {
+        log.debug("getHttpGetStatus: {}", url);
         final HttpURLConnection c = setHttpTimeouts((HttpURLConnection)new URL(url).openConnection());
         setConnectionCredentials(c);
         c.setUseCaches(false);
@@ -250,6 +264,7 @@ class TeleporterHttpClient {
             InputStream is = isError ? c.getErrorStream() : c.getInputStream();
             StringWriter writer = new StringWriter();
             IOUtils.copy(is, writer, StandardCharsets.UTF_8);
+            log.debug("Got response {} for {}", status, url);
             return new SimpleHttpResponse(status, writer.toString());
         } finally {
             // If we didn't get a status, do not attempt
@@ -260,6 +275,7 @@ class TeleporterHttpClient {
 
     void runTests(String testSelectionPath, int testReadyTimeoutSeconds) throws MalformedURLException, IOException, MultipleFailureException {
         final String testUrl = baseUrl + "/" + testServletPath + testSelectionPath + ".junit_result";
+        log.debug("Running tests: {}", testUrl);
         
         // Wait for non-404 response that signals that test bundle is ready
         final long timeout = System.currentTimeMillis() + (testReadyTimeoutSeconds * 1000L);
@@ -296,6 +312,7 @@ class TeleporterHttpClient {
                 }
                 throw new MultipleFailureException(failures);
             }
+            log.debug("POST request to run tests successful at {}", testUrl);
         } catch(ClassNotFoundException e) {
             throw new IOException("Exception reading test results:" + e, e);
         } finally {
