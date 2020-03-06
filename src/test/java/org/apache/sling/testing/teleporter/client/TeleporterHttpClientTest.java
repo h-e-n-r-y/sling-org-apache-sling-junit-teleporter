@@ -25,6 +25,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -146,5 +147,12 @@ public class TeleporterHttpClientTest {
     @Test
     public void testMissingCredentials() throws IOException {
         testWithCredentials("/protected", null, 418);
+    }
+
+    @Test(expected = UnknownHostException.class)
+    public void waitForNonExistentHostStatus() throws IOException {
+        final String nonExistentHostURL = "http://UnknownHost-" + UUID.randomUUID();
+        final TeleporterHttpClient client = new TeleporterHttpClient(nonExistentHostURL, "/");
+        client.getHttpGetStatus(nonExistentHostURL);
     }
 }
