@@ -176,4 +176,18 @@ public class TeleporterHttpClientTest {
             // as expected due to timeout
         }
     }
+
+    @Test
+    public void testBase64Encoding() {
+        assertEquals("", TeleporterHttpClient.encodeBase64(""));
+        assertEquals("Zm9v", TeleporterHttpClient.encodeBase64("foo"));
+        assertEquals("dGhlIHF1aWNrIGJyb3duIGZveA==", TeleporterHttpClient.encodeBase64("the quick brown fox"));
+
+        try {
+            TeleporterHttpClient.encodeBase64(null);
+            fail("Expected a NullPointerException");
+        } catch(NullPointerException asExpected) {
+            // as expected
+        }
+    }
 }

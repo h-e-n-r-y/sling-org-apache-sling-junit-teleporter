@@ -100,10 +100,14 @@ class TeleporterHttpClient {
     int getHttpTimeoutSeconds() {
         return httpTimeoutSeconds;
     }
+
+    static String encodeBase64(String data) {
+        return Base64.getEncoder().encodeToString(data.getBytes());
+    }
     
     public void setConnectionCredentials(URLConnection c) {
         if(credentials != null && !credentials.isEmpty()) {
-            final String basicAuth = "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes());
+            final String basicAuth = "Basic " + encodeBase64(credentials);
             c.setRequestProperty ("Authorization", basicAuth);
             log.debug("Credentials set");
         }
