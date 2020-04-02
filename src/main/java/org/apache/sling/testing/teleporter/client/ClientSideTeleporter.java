@@ -43,7 +43,6 @@ import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 import org.ops4j.pax.tinybundles.core.TinyBundle;
 import org.ops4j.pax.tinybundles.core.TinyBundles;
-import org.osgi.framework.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.helpers.NOPLogger;
@@ -79,7 +78,7 @@ public class ClientSideTeleporter extends TeleporterRule {
     
     private InputStream buildTestBundle(Class<?> c, Collection<Class<?>> embeddedClasses, String bundleSymbolicName) throws IOException {
         final TinyBundle b = TinyBundles.bundle()
-            .set(Constants.BUNDLE_SYMBOLICNAME, bundleSymbolicName)
+            .set("Bundle-SymbolicName", bundleSymbolicName)
             .set("Sling-Test-Regexp", c.getName() + ".*")
             .set("Sling-Test-WaitForService-Timeout", Integer.toString(waitForServiceTimout))
             .add(c);
