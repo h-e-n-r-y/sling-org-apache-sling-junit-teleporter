@@ -23,13 +23,13 @@ import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -43,6 +43,7 @@ import javax.json.JsonString;
 import javax.json.JsonValue;
 import javax.json.JsonValue.ValueType;
 
+import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.IOUtils;
 import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
@@ -50,9 +51,10 @@ import org.junit.runners.model.MultipleFailureException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** Barebones HTTP client that supports just what the teleporter needs,
- *  with no dependencies outside of java.* and org.junit. Prevents us 
- *  from imposing a particular HTTP client version. 
+/**
+ * Barebones HTTP client that supports just what the teleporter needs, with no
+ * dependencies outside of java.* and org.junit. Prevents us from imposing a
+ * particular HTTP client version.
  */
 class TeleporterHttpClient {
     private final Logger log = LoggerFactory.getLogger(getClass());
@@ -62,7 +64,7 @@ class TeleporterHttpClient {
     private String credentials = null;
     private final String testServletPath;
     private final int httpTimeoutSeconds;
-    
+
     static final class SimpleHttpResponse {
         private final int status;
         private final String body;
@@ -72,14 +74,16 @@ class TeleporterHttpClient {
             this.status = status;
             this.body = body;
         }
+
         public int getStatus() {
             return status;
         }
+
         public String getBody() {
             return body;
         }
     }
-    
+
     TeleporterHttpClient(String baseUrl, String testServletPath) {
         this(baseUrl, testServletPath, ClientSideTeleporter.DEFAULT_TEST_READY_TIMEOUT_SECONDS);
     }
@@ -102,7 +106,11 @@ class TeleporterHttpClient {
     }
 
     static String encodeBase64(String data) {
-        return Base64.getEncoder().encodeToString(data.getBytes());
+        try {
+            return Base64.encodeBase64String(data.getBytes("UTF-8"));
+        } catch(UnsupportedEncodingException uee) {
+            throw new RuntimeException(uee);
+        }
     }
     
     public void setConnectionCredentials(URLConnection c) {
