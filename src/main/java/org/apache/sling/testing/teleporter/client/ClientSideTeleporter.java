@@ -317,7 +317,7 @@ public class ClientSideTeleporter extends TeleporterRule {
                 final String bundleSymbolicName = installTestBundle(httpClient);
                 final String testPath = description.getClassName() + "/" + description.getMethodName();
                 try {
-                    httpClient.runTests(testPath, testReadyTimeoutSeconds);
+                    httpClient.runTests(testPath, testReadyTimeoutSeconds, bundleSymbolicName);
                 } finally {
                     if (!preventToUninstallBundle) {
                         log.info("Uninstalling bundle '{}' from {}", bundleSymbolicName, baseUrl);

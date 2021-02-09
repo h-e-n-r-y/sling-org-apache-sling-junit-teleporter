@@ -215,6 +215,7 @@ class TeleporterHttpClient {
             } catch (JsonException|IndexOutOfBoundsException e) {
                 throw new IllegalArgumentException("Test bundle '" + bundleSymbolicName +"' not correctly installed. Could not parse JSON response though to expose further information: " + jsonBody, e);
             }
+            restartTestBundle(bundleSymbolicName);
             d.waitNextDelay();
         }
         throw new IOException("Bundle '" + bundleSymbolicName + "' was not started after " + timeoutInSeconds + " seconds. The check at " + url + " was not successfull. Probably some dependent bundle was not started.");
@@ -273,15 +274,60 @@ class TeleporterHttpClient {
         }
     }
 
-    void runTests(String testSelectionPath, int testReadyTimeoutSeconds) throws MalformedURLException, IOException, MultipleFailureException {
-        final String testUrl = baseUrl + "/" + testServletPath + testSelectionPath + ".junit_result";
+    private void restartTestBundle(String bundleSymbolicName) throws MalformedURLException, IOException {
+    	
+    	log.debug("restarting bundle: " + bundleSymbolicName);
+    	
+        // equivalent of
+        // curl -u admin:admin -F action=stop http://localhost:8080/system/console/bundles/$N
+        final String url = baseUrl + "/system/console/bundles/" + bundleSymbolicName;
+        HttpURLConnection c = (HttpURLConnection)new URL(url).openConnection();
+        try {
+            setConnectionCredentials(c);
+            new MultipartAdapter(c, CHARSET)
+            .parameter("action", "stop")
+            .close();
+            final int status = c.getResponseCode();
+            if(status != 200) {
+                throw new IOException("Got status code " + status + " for " + url);
+            }
+        } finally {
+            cleanup(c);
+        }
+        
+        // equivalent of
+        // curl -u admin:admin -F action=start http://localhost:8080/system/console/bundles/$N
+        c = (HttpURLConnection)new URL(url).openConnection();
+        try {
+            setConnectionCredentials(c);
+            new MultipartAdapter(c, CHARSET)
+            .parameter("action", "start")
+            .close();
+            final int status = c.getResponseCode();
+            if(status != 200) {
+                throw new IOException("Got status code " + status + " for " + url);
+            }
+        } finally {
+            cleanup(c);
+        }
+    }
+
+    void runTests(String testSelectionPath, int testReadyTimeoutSeconds, String bundleSymbolicName) throws MalformedURLException, IOException, MultipleFailureException {
+        final String testUrl = baseUrl + "/" + testServletPath + testSelectionPath + ".junit_result?forceReload=true";
         log.debug("Running tests: {}", testUrl);
         
         // Wait for non-404 response that signals that test bundle is ready
         final long timeout = System.currentTimeMillis() + (testReadyTimeoutSeconds * 1000L);
         final ExponentialBackoffDelay delay = new ExponentialBackoffDelay(25, 1000);
         while(true) {
-            if(getHttpGetStatus(testUrl).getStatus() == 200) {
+	    SimpleHttpResponse response = getHttpGetStatus(testUrl);
+            if(response.getStatus() == 200) {
+                break;
+            }
+            log.debug("JUnit-Test not ready yet: " + testUrl);
+            if(System.currentTimeMillis() > timeout / 2) {
+            	log.debug("trying to restart test-bundle");
+                restartTestBundle(bundleSymbolicName);
                 break;
             }
             if(System.currentTimeMillis() > timeout) {
@@ -299,21 +345,25 @@ class TeleporterHttpClient {
             c.setDoOutput(true);
             c.setDoInput(true);
             c.setInstanceFollowRedirects(false);
+        	log.debug("starting tests: {}", testUrl);
             final int status = c.getResponseCode();
             if(status != 200) {
                 throw new IOException("Got status code " + status + " for " + testUrl);
             }
         
+        	log.debug("reading test results: {}", testUrl);
             final Result result = (Result)new ObjectInputStream(c.getInputStream()).readObject();
             if(result.getFailureCount() > 0) {
+            	log.debug("got {} failures:", testUrl);
                 final List<Throwable> failures = new ArrayList<Throwable>(result.getFailureCount());
                 for (Failure f : result.getFailures()) {
                     failures.add(f.getException());
+                	log.debug("    failure:", f.getException());
                 }
                 throw new MultipleFailureException(failures);
             }
             log.debug("POST request to run tests successful at {}", testUrl);
-        } catch(ClassNotFoundException e) {
+        } catch(Exception e) {
             throw new IOException("Exception reading test results:" + e, e);
         } finally {
             cleanup(c);

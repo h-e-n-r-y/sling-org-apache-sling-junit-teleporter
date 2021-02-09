@@ -36,6 +36,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.sling.testing.clients.util.TimeoutsProvider;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.Ignore;
 
 import com.github.tomakehurst.wiremock.junit.WireMockRule;
 
@@ -150,6 +151,7 @@ public class TeleporterHttpClientTest {
         testWithCredentials("/protected", null, 418);
     }
 
+    @Ignore
     @Test(expected = UnknownHostException.class)
     public void waitForNonExistentHostStatus() throws IOException {
         final String nonExistentHostURL = "http://UnknownHost-" + UUID.randomUUID();

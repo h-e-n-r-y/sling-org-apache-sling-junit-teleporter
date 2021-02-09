@@ -27,7 +27,7 @@
   </parent>
 
   <artifactId>org.apache.sling.junit.teleporter</artifactId>
-  <version>1.0.20</version>
+  <version>1.0.20-dbad-mod-2</version>
 
   <name>Apache Sling JUnit Tests Teleporter</name>
   <description>Client-side implementation of the Teleporter mechanism for server-side JUnit tests</description>
@@ -148,6 +148,22 @@
       <scope>provided</scope>
     </dependency>
   </dependencies>
+	<distributionManagement>
+	<repository>
+		<uniqueVersion>false</uniqueVersion>
+		<id>releases</id>
+		<name>RBB-Nexus-Releases</name>
+		<url>https://docs.rbb-online.de/nexus/content/repositories/releases/</url>
+		<layout>default</layout>
+	</repository>
+	<snapshotRepository>
+		<uniqueVersion>true</uniqueVersion>
+		<id>snapshots</id>
+		<name>RBB-Nexus-Snapshots</name>
+		<url>https://docs.rbb-online.de/nexus/content/repositories/snapshots/</url>
+		<layout>default</layout>
+	</snapshotRepository>
+  </distributionManagement>
   
   <scm>
     <connection>scm:git:https://gitbox.apache.org/repos/asf/sling-org-apache-sling-junit-teleporter.git</connection>
