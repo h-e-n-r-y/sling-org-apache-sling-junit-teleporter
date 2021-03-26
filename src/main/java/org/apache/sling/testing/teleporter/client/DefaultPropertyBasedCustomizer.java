@@ -126,6 +126,7 @@ public class DefaultPropertyBasedCustomizer implements Customizer {
         cst.setBaseUrl(baseUrl);
         cst.setServerCredentials(serverUsername, serverPassword);
         cst.setTestReadyTimeoutSeconds(testReadyTimeout);
+        cst.setWebConsoleReadyTimeoutSeconds(testReadyTimeout);
         if (StringUtils.isNotBlank(includeDependencyPrefixes)) {
             for (String includeDependencyPrefix : includeDependencyPrefixes.split(LIST_SEPARATOR)) {
                 if (StringUtils.isNotBlank(includeDependencyPrefix)) {
