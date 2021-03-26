@@ -363,7 +363,7 @@ class TeleporterHttpClient {
                 throw new MultipleFailureException(failures);
             }
             log.debug("POST request to run tests successful at {}", testUrl);
-        } catch(Exception e) {
+        } catch(ClassNotFoundException e) {
             throw new IOException("Exception reading test results:" + e, e);
         } finally {
             cleanup(c);
